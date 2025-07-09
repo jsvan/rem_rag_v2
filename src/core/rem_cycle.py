@@ -209,7 +209,7 @@ class REMCycle:
     
     def _store_rem_node(self, synthesis: str, question: str, samples: List[REMSample]) -> str:
         """
-        Store the REM synthesis as a new node in the vector store.
+        Store the REM synthesis as a new node in the vector store through implant.
         
         Args:
             synthesis: The generated synthesis text
@@ -217,7 +217,7 @@ class REMCycle:
             samples: The source samples used
             
         Returns:
-            The ID of the created node
+            The ID of the created REM node
         """
         # Prepare metadata
         metadata = {
@@ -227,6 +227,7 @@ class REMCycle:
             "source_node_ids": json.dumps([s.node_id for s in samples]),
             "source_years": json.dumps([s.metadata.get("year", "Unknown") for s in samples]),
             "timestamp": datetime.now(timezone.utc).isoformat(),
+            "generation_depth": 0
         }
         
         # Add year range for searchability
@@ -238,36 +239,21 @@ class REMCycle:
         # Create combined text for embedding
         text_for_embedding = f"Question: {question}\n\nSynthesis: {synthesis}"
         
-        # Store in vector database
-        node_ids = self.store.add(
-            texts=[text_for_embedding],
-            metadata=[metadata]
-        )
-        node_id = node_ids[0]
-        
-        # Now implant the REM synthesis to see how it relates to existing knowledge
+        # Store REM node through implant (this will also check for similar patterns)
         implant_result = implant_knowledge_sync(
             new_content=text_for_embedding,
             vector_store=self.store,
             llm_client=self.llm,
-            metadata={
-                "node_type": "synthesis",
-                "source_type": "rem_synthesis",
-                "rem_node_id": node_id,
-                "implicit_question": question,
-                "source_years": json.dumps([s.metadata.get("year", "Unknown") for s in samples]),
-                "generation_depth": 1,
-                "synthesis_type": "rem_level",
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            },
-            context_filter=None,  # Look across all knowledge
+            metadata=metadata,
+            context_filter=None,  # Look across all knowledge for REM patterns
             k=3
         )
         
-        logger.debug(f"REM implant result: valuable={implant_result['is_valuable']}, "
+        logger.debug(f"REM node stored: id={implant_result['original_id']}, "
+                    f"synthesis_valuable={implant_result['is_valuable']}, "
                     f"existing_count={implant_result['existing_count']}")
         
-        return node_id
+        return implant_result['original_id']
     
     def query_rem_insights(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """

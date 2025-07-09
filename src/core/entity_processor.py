@@ -108,56 +108,34 @@ class EntityProcessor:
         Returns:
             Dict indicating what was stored
         """
-        # Use modular implant function to compare with existing knowledge
-        implant_result = await implant_knowledge(
-            new_content=learning,
-            vector_store=self.vector_store,
-            llm_client=self.llm,
-            metadata={
-                "entity": entity_name,
-                "year": year,
-                "article_id": article_id,
-                "source_type": "entity_synthesis",
-                "node_type": "synthesis",
-                "generation_depth": 1,
-                "synthesis_type": "entity_level",
-                "parent_learning": learning[:100],  # Reference to what triggered this
-                **(chunk_metadata or {})  # Include any chunk metadata
-            },
-            context_filter={"entity": entity_name},
-            k=3
-        )
-        
-        # Determine what to store for the learning node
-        is_redundant = implant_result["synthesis"] and implant_result["synthesis"].strip() == "NOTHING"
-        store_synthesis = implant_result["is_valuable"]
-        
-        # Prepare metadata
-        base_metadata = {
+        # Prepare metadata for the learning
+        learning_metadata = {
             "entity": entity_name,
             "year": year,
             "article_id": article_id,
             "source_type": "entity_extraction",
-            "generation_depth": 0
+            "node_type": "learning",
+            "generation_depth": 0,
+            **(chunk_metadata or {})  # Include any chunk metadata
         }
         
-        if chunk_metadata:
-            base_metadata.update(chunk_metadata)
+        # Use implant function to store learning and generate synthesis
+        implant_result = await implant_knowledge(
+            new_content=learning,
+            vector_store=self.vector_store,
+            llm_client=self.llm,
+            metadata=learning_metadata,
+            context_filter={"entity": entity_name},
+            k=3
+        )
         
-        # Always store the learning
-        learning_metadata = base_metadata.copy()
-        if is_redundant:
-            learning_metadata["node_type"] = "learning_nothing"
-        else:
-            learning_metadata["node_type"] = "learning"
-        
-        self.vector_store.add([learning], [learning_metadata])
-        
-        # Synthesis is already stored by implant_knowledge if valuable
+        # Check if the synthesis indicated redundancy
+        is_redundant = implant_result["synthesis"] and implant_result["synthesis"].strip() == "NOTHING"
         
         return {
-            "stored_synthesis": store_synthesis,
-            "was_redundant": is_redundant
+            "stored_synthesis": implant_result["is_valuable"],
+            "was_redundant": is_redundant,
+            "learning_id": implant_result["original_id"]
         }
     
     async def batch_process_chunks(

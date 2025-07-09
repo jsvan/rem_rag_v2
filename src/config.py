@@ -33,7 +33,7 @@ CHUNK_SIZE = 1000  # tokens (for SmartChunker - deprecated)
 CHUNK_OVERLAP = 100  # tokens (for SmartChunker - deprecated)
 CHUNK_MAX_WORDS = 300  # words (for SentenceAwareChunker)
 CHUNK_MIN_CHARS = 150  # minimum characters to keep a chunk
-NEIGHBORS_COUNT = 5  # for similarity search
+NEIGHBORS_COUNT = 3  # for similarity search
 REM_NEIGHBORS = 3  # nodes to sample in REM cycle
 
 # REM cycle settings
@@ -71,11 +71,16 @@ If this adds nothing new or is simply a repetition of what we already know, resp
 
 REM_QUESTION_PROMPT = """What is the implicit question at the heart which binds the following passages together? Reply with the question only."""
 
+ARTICLE_SUMMARY_PROMPT = """Summarize this article in 1-2 paragraphs (100-150 words). 
+Focus on the main arguments, key insights, and conclusions. 
+Be direct and specific, avoiding meta-commentary about the article itself."""
+
 # Node type definitions for tracking different kinds of knowledge
 NODE_TYPES = {
     "learning": "Original entity learning extracted from text",
     "synthesis": "Valuable synthesis comparing new and existing knowledge",
     "rem": "Pattern discovered during REM cycle",
     "learning_nothing": "Learning that added nothing new to existing knowledge",
-    "chunk": "Original text chunk from article"
+    "chunk": "Original text chunk from article",
+    "summary": "Article-level summary capturing main insights"
 }

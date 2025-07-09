@@ -14,7 +14,8 @@ from ..config import (
     SYNTHESIS_PROMPT,
     IMPLANT_SYNTHESIS_PROMPT,
     NODE_TYPES,
-    NEIGHBORS_COUNT
+    NEIGHBORS_COUNT,
+    ARTICLE_SUMMARY_PROMPT
 )
 
 logger = logging.getLogger(__name__)
@@ -86,6 +87,12 @@ class ReadingCycle:
             if chunk_stats["chunk_synthesis_stored"]:
                 stats["chunk_syntheses"] += 1
         
+        # Generate and store article summary after processing all chunks
+        summary_stats = await self._generate_article_summary(article)
+        stats["summary_generated"] = summary_stats["summary_stored"]
+        stats["summary_entities"] = summary_stats["entities_extracted"]
+        stats["valuable_syntheses"] += summary_stats["entity_syntheses"]
+        
         # Calculate processing time
         stats["processing_time"] = (datetime.now() - start_time).total_seconds()
         
@@ -111,7 +118,7 @@ class ReadingCycle:
         year = chunk_meta.get("year", 1922)
         article_id = chunk_meta.get("article_id", "")
         
-        # 1. Store original chunk
+        # 1. Store original chunk through implant
         chunk_metadata = {
             "year": year,
             "article_id": article_id,
@@ -125,8 +132,16 @@ class ReadingCycle:
             **chunk_meta
         }
         
-        chunk_ids = self.vector_store.add([chunk_text], [chunk_metadata])
-        chunk_id = chunk_ids[0]
+        # Use implant to store chunk (it will compare with existing knowledge)
+        chunk_implant_result = await implant_knowledge(
+            new_content=chunk_text,
+            vector_store=self.vector_store,
+            llm_client=self.llm,
+            metadata=chunk_metadata,
+            context_filter={"year": {"$lt": year}},  # Only look at earlier knowledge
+            k=NEIGHBORS_COUNT
+        )
+        chunk_id = chunk_implant_result["original_id"]
         
         # 2. Extract and process entities
         entity_stats = await self.entity_processor.process_chunk_entities(
@@ -136,30 +151,64 @@ class ReadingCycle:
             chunk_metadata={"chunk_id": chunk_id}
         )
         
-        # 3. Generate chunk-level synthesis using modular implant function
-        implant_result = await implant_knowledge(
-            new_content=chunk_text,
-            vector_store=self.vector_store,
-            llm_client=self.llm,
-            metadata={
-                "year": year,
-                "article_id": article_id,
-                "source_type": "chunk_synthesis",
-                "node_type": "synthesis",
-                "generation_depth": 1,
-                "parent_chunk_id": chunk_id,
-                "synthesis_type": "chunk_level"
-            },
-            context_filter={"year": {"$lt": year}},  # Only look at earlier knowledge
-            k=NEIGHBORS_COUNT
-        )
-        
-        chunk_synthesis_stored = implant_result["is_valuable"]
+        # Note: Chunk synthesis already handled by implant_knowledge above
+        chunk_synthesis_stored = chunk_implant_result["is_valuable"]
         
         return {
             "entities_extracted": entity_stats["total_entities"],
             "entity_syntheses": entity_stats["valuable_syntheses"],
             "chunk_synthesis_stored": chunk_synthesis_stored
+        }
+    
+    async def _generate_article_summary(self, article: Dict) -> Dict[str, any]:
+        """
+        Generate and store article summary after all chunks are processed.
+        
+        Steps:
+        1. Generate summary using full article text
+        2. Store summary through implant
+        3. Extract and process entities from summary
+        """
+        # Generate summary
+        summary = await self.llm.generate(
+            prompt=f"{ARTICLE_SUMMARY_PROMPT}\n\nTitle: {article['title']}\n\nText: {article['text']}",
+            temperature=0.7,
+            max_tokens=200
+        )
+        
+        # Store summary through implant
+        summary_metadata = {
+            "year": article["year"],
+            "article_id": article["article_id"],
+            "title": article["title"],
+            "source_type": "article_summary",
+            "node_type": "summary",
+            "generation_depth": 0
+        }
+        
+        summary_implant_result = await implant_knowledge(
+            new_content=summary,
+            vector_store=self.vector_store,
+            llm_client=self.llm,
+            metadata=summary_metadata,
+            context_filter={"year": {"$lt": article["year"]}},
+            k=NEIGHBORS_COUNT
+        )
+        
+        # Extract entities from summary
+        entity_stats = await self.entity_processor.process_chunk_entities(
+            chunk_text=summary,
+            year=article["year"],
+            article_id=article["article_id"],
+            chunk_metadata={"summary_id": summary_implant_result["original_id"], "is_summary": True}
+        )
+        
+        return {
+            "summary_stored": True,
+            "summary_id": summary_implant_result["original_id"],
+            "summary_synthesis_stored": summary_implant_result["is_valuable"],
+            "entities_extracted": entity_stats["total_entities"],
+            "entity_syntheses": entity_stats["valuable_syntheses"]
         }
     
     async def process_articles_chronologically(
