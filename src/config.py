@@ -38,7 +38,7 @@ REM_NEIGHBORS = 3  # nodes to sample in REM cycle
 
 # REM cycle settings
 REM_CYCLE_FREQUENCY = "monthly"  # "monthly" for testing, "yearly" for production
-REM_DREAMS_PER_CYCLE = 100  # number of dreams per REM cycle
+REM_SCALING_FACTOR = 0.25  # n/4 scaling - REM cycles = total non-REM nodes / 4
 
 # Prompts
 SUMMARIZATION_PROMPT = """Summarize the following passages. Write a single unified answer, about 100 words long, and do not enumerate over each document in the context, or add your own analysis. Do not refer to "the texts", or "the passages", simply combine and distill their information together with as many details as possible, and a focus on the insights and wisdom contained within. Mention the years at play in your answer."""

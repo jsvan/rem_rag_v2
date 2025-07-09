@@ -26,7 +26,7 @@ async def implant_knowledge(
     llm_client: LLMClient,
     metadata: Dict[str, Any],
     context_filter: Optional[Dict[str, Any]] = None,
-    k: int = 3
+    k: int = 5
 ) -> Dict[str, Any]:
     """
     Universal gateway for adding content to the knowledge base.
@@ -81,7 +81,7 @@ async def implant_knowledge(
                 existing_knowledge=existing_text
             ),
             temperature=0.7,
-            max_tokens=200  # Increased to avoid truncation
+            max_tokens=500  # Increased to avoid truncation
         )
         
         result["synthesis"] = synthesis
@@ -118,7 +118,7 @@ def implant_knowledge_sync(
     llm_client: LLMClient,
     metadata: Dict[str, Any],
     context_filter: Optional[Dict[str, Any]] = None,
-    k: int = 3
+    k: int = 5
 ) -> Dict[str, Any]:
     """
     Synchronous version of implant_knowledge for use in non-async contexts.
@@ -173,7 +173,7 @@ def implant_knowledge_sync(
                 existing_knowledge=existing_text
             ),
             temperature=0.7,
-            max_tokens=200  # Increased to avoid truncation
+            max_tokens=500  # Increased to avoid truncation
         )
         
         result["synthesis"] = synthesis

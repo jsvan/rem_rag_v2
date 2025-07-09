@@ -175,10 +175,10 @@ flowchart TD
     ChunkLoop --> |2| ConsiderThemes[LLM: Consider Themes]
     ConsiderThemes --> |"Extract themes/entities<br/>from chunk"| ThemeLoop{For each theme}
     
-    ThemeLoop --> ImplantTheme[Implant Theme Learning]
-    ImplantTheme --> |"new_content: learning<br/>filter: {entity: theme_name}<br/>metadata: {node_type: 'learning', entity: theme, ...}"| ImplantFunction
+    ThemeLoop --> StoreTheme[Direct Store Theme]
+    StoreTheme --> |"text: 'About entity: learning'<br/>metadata: {node_type: 'learning', entity: theme, ...}"| DirectStore[(ChromaDB)]
     
-    ThemeLoop -->|More themes| ImplantTheme
+    ThemeLoop -->|More themes| StoreTheme
 
     ChunkLoop -->|Done| GenerateSummary[LLM: Generate Article Summary]
     
@@ -190,12 +190,13 @@ flowchart TD
     
     REMCycle --> REMLoop{For i in num_dreams}
     REMLoop --> SampleNodes[Sample 3 Nodes from ChromaDB]
-    SampleNodes --> |"1 from current year + 2 random"| FindQuestion[LLM: Find Implicit Question/Answer Implicit Question<br/>LLM Generate REM Synthesis]
-    FindQuestion --> ImplantREM[Implant REM Insight]
-    ImplantREM --> |"new_content: 'Question: ' + question + '<br/>Synthesis: ' + synthesis<br/>filter: None<br/>metadata: {node_type: 'rem', ...}"| ImplantFunction
+    SampleNodes --> |"1 from current year + 2 random"| FindQuestion[LLM: Find Implicit Question]
+    FindQuestion --> GenerateREMSynthesis[LLM: Generate REM Synthesis]
+    GenerateREMSynthesis --> StoreREM[Direct Store REM]
+    StoreREM --> |"text: 'Question: ' + question + '<br/>Synthesis: ' + synthesis<br/>metadata: {node_type: 'rem', year: current_year, ...}"| DirectStore2[(ChromaDB)]
     
 
-    %% Implant Function Subgraph
+    %% Implant Function Subgraph (only for chunks and summaries now)
     subgraph ImplantFunction[" "]
         direction TB
         IFStart[["implant_knowledge()"]] --> IFQuery[Query Related Knowledge]
@@ -225,12 +226,14 @@ flowchart TD
     classDef processNode fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
     classDef decisionNode fill:#fce4ec,stroke:#880e4f,stroke-width:2px
     classDef implantNode fill:#e8f5e9,stroke:#1b5e20,stroke-width:4px
+    classDef directStoreNode fill:#fff8e1,stroke:#f57c00,stroke-width:3px
     
     class ConsiderThemes,GenerateSummary,FindQuestion,GenerateREMSynthesis,IFGenerate llmNode
-    class IFOriginalStored,IFQueryDB,IFSynthStored dbNode
+    class IFOriginalStored,IFQueryDB,IFSynthStored,DirectStore,DirectStore2 dbNode
     class ChunkArticle,SampleNodes,IFStore,IFQuery,IFStoreSynthesis processNode
     class ChunkLoop,ThemeLoop,CheckREM,REMLoop,IFCheck,IFCheckValue decisionNode
-    class ImplantFunction,ImplantChunk,ImplantTheme,ImplantSummary,ImplantSummaryNode,ImplantREM implantNode
+    class ImplantFunction,ImplantChunk,ImplantSummaryNode implantNode
+    class StoreTheme,StoreREM directStoreNode
     
     %% Style the subgraph
     style ImplantFunction fill:#e8f5e9,stroke:#1b5e20,stroke-width:3px

@@ -1,36 +1,65 @@
 # REM RAG Scripts
 
-This directory contains scripts for running experiments and processing Foreign Affairs articles.
+This directory contains scripts for processing Foreign Affairs articles and running experiments.
 
-## Working Scripts
+## Production Scripts
 
-### `run_1922_fixed.py` ✅
-The main working experiment that processes 1922 Foreign Affairs articles.
+### `run_2000s_decade.py` ✅
+Main script for processing an entire decade with yearly REM cycles.
 
 **Features:**
-- Loads articles from local JSON files
-- Uses SmartChunker for intelligent paragraph-aware chunking
-- Generates direct insight summaries (no meta-commentary)
-- Stores in ChromaDB vector database
-- Searches for key historical themes
+- Processes articles chronologically by year
+- Uses cost-optimized approach (direct storage for themes/REM)
+- Runs REM cycles at the end of each year
+- Supports batch REM processing (50% cost savings)
+- Comprehensive statistics tracking
+
+**Usage:**
+```bash
+python scripts/run_2000s_decade.py
+```
+
+### `run_1922_fixed.py` ✅
+Processes 1922 Foreign Affairs articles (the founding year).
+
+**Features:**
+- Uses sentence-aware chunking
+- Generates article summaries
+- Basic theme extraction
+- Good for testing on smaller dataset
 
 **Usage:**
 ```bash
 python scripts/run_1922_fixed.py
 ```
 
-**Requirements:**
-- Set `OPENAI_API_KEY` environment variable
-- Local JSON files in `data/essays/articles/`
+## Utility Scripts
 
-## Experimental Scripts
+### `analyze_database.py`
+Analyzes the vector database contents and generates reports.
 
-### `run_1922_experiment.py` ⚠️
-Original experiment design - has interface issues, use `run_1922_fixed.py` instead.
+**Features:**
+- Statistics by node type and year
+- Entity frequency analysis
+- Sample queries for verification
+- Export capabilities
 
-### Other Scripts
-- Additional experiment scripts in `src/experiments/`
-- These may have interface mismatches with current implementation
+### `clear_database.py`
+Clears the ChromaDB collection (use with caution!).
+
+### `test_batch_rem_mock.py`
+Tests batch REM processing with mock data.
+
+**Features:**
+- Tests batch file creation (no API calls)
+- Optional mini batch test (~$0.001)
+- Good for debugging batch format
+
+### `test_rem_step.py`
+Tests a single REM cycle step.
+
+### `test_year_metadata.py`
+Verifies year metadata is correctly added to all node types.
 
 ## Data Format
 
@@ -47,15 +76,12 @@ Expected JSON structure for articles:
 }
 ```
 
-## Next Steps
+## Architecture Notes
 
-1. Add REM cycle integration to the working script
-2. Process full 1920s decade (304 articles available)
-3. Implement entity extraction and explosion
-4. Add evaluation metrics
+The current implementation uses:
+- **Simplified processing** in production scripts for cost efficiency
+- **Direct storage** for themes and REM nodes (no implant synthesis)
+- **Batch API** for REM processing (50% discount)
+- **Year-based filtering** to ensure temporal coherence
 
-## Notes
-
-- The 1920s data captures the post-WWI transformation period
-- Foreign Affairs was founded in 1922, making it perfect for testing
-- Smart chunking preserves semantic coherence better than character-based splitting
+For the full READING cycle with entity extraction, see `src/core/reading_cycle.py`.

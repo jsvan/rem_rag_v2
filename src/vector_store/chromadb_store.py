@@ -9,6 +9,7 @@ from typing import List, Dict, Optional, Any
 import logging
 from datetime import datetime
 import uuid
+import random
 
 from ..config import (
     CHROMA_PERSIST_DIR, 
@@ -147,34 +148,63 @@ class REMVectorStore:
         Returns:
             Dict with keys: documents, metadatas, ids
         """
-        # ChromaDB doesn't have direct random sampling, so we:
-        # 1. Get all matching documents
-        # 2. Sample randomly from them
+        # Use offset-based random sampling for true uniform distribution
         
-        # Build query parameters
-        query_params = {"limit": 10000}  # Reasonable upper bound
+        # First, get the total count
+        # Since ChromaDB count() doesn't support filters, we get a minimal query
         if filter:
-            query_params["where"] = filter
+            # Get one result to check if any documents match
+            test_result = self.collection.get(where=filter, limit=1, include=[])
+            if not test_result["ids"]:
+                return {"documents": [], "metadatas": [], "ids": []}
             
-        all_results = self.collection.get(**query_params)
+            # For filtered queries, we need to get all IDs first
+            # This is a limitation of ChromaDB - no filtered count
+            all_ids = self.collection.get(
+                where=filter, 
+                limit=100000,  # High limit
+                include=[]  # Just IDs for efficiency
+            )
+            total_count = len(all_ids["ids"])
+        else:
+            # For unfiltered, we can use count()
+            total_count = self.collection.count()
         
-        total_docs = len(all_results["ids"])
-        
-        if total_docs == 0:
+        if total_count == 0:
             return {"documents": [], "metadatas": [], "ids": []}
         
-        # Random sample
-        if total_docs <= n:
-            # Return all if we have fewer than requested
-            return all_results
+        # Determine sample size
+        sample_size = min(n, total_count)
         
-        # Sample indices
-        indices = np.random.choice(total_docs, size=n, replace=False)
+        # Generate random offsets
+        if sample_size == total_count:
+            # Just get everything
+            return self.collection.get(where=filter, limit=total_count)
+        
+        # Generate unique random offsets
+        random_offsets = sorted(random.sample(range(total_count), sample_size))
+        
+        # Fetch documents at these offsets
+        sampled_docs = []
+        sampled_metas = []
+        sampled_ids = []
+        
+        for offset in random_offsets:
+            result = self.collection.get(
+                where=filter,
+                limit=1,
+                offset=offset
+            )
+            
+            if result["ids"]:
+                sampled_ids.extend(result["ids"])
+                sampled_docs.extend(result["documents"]) 
+                sampled_metas.extend(result["metadatas"])
         
         return {
-            "documents": [all_results["documents"][i] for i in indices],
-            "metadatas": [all_results["metadatas"][i] for i in indices],
-            "ids": [all_results["ids"][i] for i in indices]
+            "documents": sampled_docs,
+            "metadatas": sampled_metas,
+            "ids": sampled_ids
         }
     
     def get_by_year(self, year: int) -> dict:

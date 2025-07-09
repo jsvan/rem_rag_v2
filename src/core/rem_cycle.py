@@ -18,7 +18,6 @@ from tqdm import tqdm
 
 from ..llm import LLMClient
 from ..vector_store import REMVectorStore
-from ..core.implant import implant_knowledge_sync
 from ..config import REM_QUESTION_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -40,18 +39,30 @@ class REMCycle:
         self.llm = llm_client
         self.store = vector_store
     
-    def run_cycle(self, num_dreams: int = 100, current_year: Optional[int] = None) -> List[str]:
+    def run_cycle(self, current_year: Optional[int] = None) -> List[str]:
         """
-        Run a complete REM cycle with specified number of dreams.
+        Run a complete REM cycle with n/4 dreams where n is the number of non-REM nodes.
         
         Args:
-            num_dreams: Number of REM syntheses to generate
             current_year: Year context for sampling (uses current timestamp if None)
             
         Returns:
             List of node IDs for created REM nodes
         """
-        print(f"\n🌙 Starting REM cycle with {num_dreams} dreams...")
+        # Count non-REM nodes to avoid recursive growth
+        all_results = self.store.collection.get(
+            where={"node_type": {"$ne": "rem"}}, 
+            limit=10000
+        )
+        non_rem_count = len(all_results["ids"])
+        
+        # Apply n/4 scaling
+        from ..config import REM_SCALING_FACTOR
+        num_dreams = max(1, int(non_rem_count * REM_SCALING_FACTOR))
+        
+        print(f"\n🌙 Starting REM cycle")
+        print(f"📊 Database has {non_rem_count} non-REM nodes")
+        print(f"🎯 Running {num_dreams} REM dreams (n/{int(1/REM_SCALING_FACTOR)} scaling)...")
         
         rem_node_ids = []
         for i in tqdm(range(num_dreams), desc="  Generating dreams", unit="dream"):
@@ -70,7 +81,7 @@ class REMCycle:
                 synthesis = self._generate_synthesis(samples, question)
                 
                 # Store REM node
-                node_id = self._store_rem_node(synthesis, question, samples)
+                node_id = self._store_rem_node(synthesis, question, samples, current_year)
                 rem_node_ids.append(node_id)
                 
             except Exception as e:
@@ -93,10 +104,15 @@ class REMCycle:
         samples = []
         
         # Get all available nodes (excluding REM nodes to avoid recursion)
-        # Use collection.get() method from ChromaDB
-        all_results = self.store.collection.get(
-            where={"node_type": {"$ne": "rem"}},
-            limit=10000
+        # Use the store's sample method to get a random subset
+        # This avoids the issue of always getting the same first 10k nodes
+        sample_filter = {"node_type": {"$ne": "rem"}}
+        
+        # Get a large random sample to ensure variety
+        # We need at least 3 nodes, but get more for better randomness
+        all_results = self.store.sample(
+            n=5000,  # Half the previous limit, but now properly randomized
+            filter=sample_filter
         )
         
         # Convert to list of dicts for compatibility
@@ -164,7 +180,7 @@ class REMCycle:
         
         response = self.llm.generate_sync(
             prompt=prompt,
-            max_tokens=50
+            max_tokens=500
         )
         return response.strip()
     
@@ -203,11 +219,11 @@ class REMCycle:
         
         response = self.llm.generate_sync(
             prompt=prompt,
-            max_tokens=300  # Increased to avoid truncation
+            max_tokens=500  # Increased to avoid truncation
         )
         return response.strip()
     
-    def _store_rem_node(self, synthesis: str, question: str, samples: List[REMSample]) -> str:
+    def _store_rem_node(self, synthesis: str, question: str, samples: List[REMSample], current_year: Optional[int] = None) -> str:
         """
         Store the REM synthesis as a new node in the vector store through implant.
         
@@ -215,6 +231,7 @@ class REMCycle:
             synthesis: The generated synthesis text
             question: The implicit question
             samples: The source samples used
+            current_year: The year context for this REM cycle
             
         Returns:
             The ID of the created REM node
@@ -230,8 +247,14 @@ class REMCycle:
             "generation_depth": 0
         }
         
-        # Add year range for searchability
+        # Add year metadata - use current_year if provided, otherwise use max of source years
         years = [s.metadata.get("year") for s in samples if s.metadata.get("year")]
+        if current_year:
+            metadata["year"] = current_year
+        elif years:
+            metadata["year"] = max(years)  # Use the most recent year from sources
+            
+        # Add year range for searchability
         if years:
             metadata["year_min"] = min(years)
             metadata["year_max"] = max(years)
@@ -239,21 +262,12 @@ class REMCycle:
         # Create combined text for embedding
         text_for_embedding = f"Question: {question}\n\nSynthesis: {synthesis}"
         
-        # Store REM node through implant (this will also check for similar patterns)
-        implant_result = implant_knowledge_sync(
-            new_content=text_for_embedding,
-            vector_store=self.store,
-            llm_client=self.llm,
-            metadata=metadata,
-            context_filter=None,  # Look across all knowledge for REM patterns
-            k=3
-        )
+        # Store REM node directly (no implant synthesis needed)
+        ids = self.store.add([text_for_embedding], [metadata])
         
-        logger.debug(f"REM node stored: id={implant_result['original_id']}, "
-                    f"synthesis_valuable={implant_result['is_valuable']}, "
-                    f"existing_count={implant_result['existing_count']}")
+        logger.debug(f"REM node stored directly: id={ids[0] if ids else 'None'}")
         
-        return implant_result['original_id']
+        return ids[0] if ids else None
     
     def query_rem_insights(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """
