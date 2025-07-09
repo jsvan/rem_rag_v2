@@ -11,6 +11,7 @@ this function, which:
 
 from typing import Dict, Optional, Any
 import logging
+import json
 
 from ..llm import LLMClient
 from ..vector_store import REMVectorStore
@@ -94,7 +95,7 @@ async def implant_knowledge(
             synthesis_metadata.update({
                 "node_type": "synthesis",
                 "generation_depth": synthesis_metadata.get("generation_depth", 0) + 1,
-                "parent_ids": [original_id],  # Link to original content
+                "parent_ids": json.dumps([original_id]),  # Link to original content (JSON string for ChromaDB)
                 "synthesis_type": synthesis_metadata.get("synthesis_type", "implant")
             })
             
@@ -186,7 +187,7 @@ def implant_knowledge_sync(
             synthesis_metadata.update({
                 "node_type": "synthesis",
                 "generation_depth": synthesis_metadata.get("generation_depth", 0) + 1,
-                "parent_ids": [original_id],  # Link to original content
+                "parent_ids": json.dumps([original_id]),  # Link to original content (JSON string for ChromaDB)
                 "synthesis_type": synthesis_metadata.get("synthesis_type", "implant")
             })
             
