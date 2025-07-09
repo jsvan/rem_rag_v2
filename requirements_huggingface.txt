@@ -1,0 +1,8 @@
+# HuggingFace dependencies for dataset creation and upload
+datasets>=2.14.0
+huggingface_hub>=0.19.0
+tqdm>=4.65.0
+
+# Optional but recommended
+pyarrow>=14.0.0  # For Parquet support
+pandas>=2.0.0    # For data manipulation
