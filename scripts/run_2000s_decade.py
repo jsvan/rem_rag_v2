@@ -89,7 +89,7 @@ class Decade2000sProcessor:
                 self.stats[year]['rem_failed'] = True
             
             # DEBUG: REMOVE FOR FULL DECADE
-            input(f"\n⏸️  Year {year} complete. Press Enter to continue to {year + 1}...")
+            # input(f"\n⏸️  Year {year} complete. Press Enter to continue to {year + 1}...")
         
         # Final analysis
         elapsed = time.time() - start_time
