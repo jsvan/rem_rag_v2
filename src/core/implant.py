@@ -72,7 +72,17 @@ async def implant_knowledge(
     # STEP 3: Generate synthesis if we have existing knowledge
     if existing_results["documents"]:
         # We have relevant existing knowledge
-        existing_text = "\n\n---\n\n".join(existing_results["documents"][:k])
+        # Format with temporal context - add year to each chunk
+        formatted_chunks = []
+        for i in range(min(k, len(existing_results["documents"]))):
+            doc = existing_results["documents"][i]
+            meta = existing_results["metadatas"][i] if i < len(existing_results["metadatas"]) else {}
+            year = meta.get("year", "Unknown Year")
+            # Append year context to the chunk text
+            formatted_chunk = f"{doc} (Year: {year})"
+            formatted_chunks.append(formatted_chunk)
+        
+        existing_text = "\n\n---\n\n".join(formatted_chunks)
         
         # Generate synthesis
         synthesis = await llm_client.generate(
@@ -164,7 +174,17 @@ def implant_knowledge_sync(
     # STEP 3: Generate synthesis if we have existing knowledge
     if existing_results["documents"]:
         # We have relevant existing knowledge
-        existing_text = "\n\n---\n\n".join(existing_results["documents"][:k])
+        # Format with temporal context - add year to each chunk
+        formatted_chunks = []
+        for i in range(min(k, len(existing_results["documents"]))):
+            doc = existing_results["documents"][i]
+            meta = existing_results["metadatas"][i] if i < len(existing_results["metadatas"]) else {}
+            year = meta.get("year", "Unknown Year")
+            # Append year context to the chunk text
+            formatted_chunk = f"{doc} (Year: {year})"
+            formatted_chunks.append(formatted_chunk)
+        
+        existing_text = "\n\n---\n\n".join(formatted_chunks)
         
         # Generate synthesis
         synthesis = llm_client.generate_sync(

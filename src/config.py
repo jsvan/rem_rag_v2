@@ -60,16 +60,31 @@ IMPLANT_SYNTHESIS_PROMPT = """New information: {new_info}
 
 Existing knowledge: {existing_knowledge}
 
-Write exactly 1 short paragraph (50-100 words) explaining how this new information relates to existing knowledge. Focus on:
-- Key similarities or contradictions
-- How it extends or challenges what we know
-- The most important new insight (if any)
+Based on comparing these passages, state the key insight or pattern that emerges. Write exactly 1 paragraph (50-100 words) that:
 
-Be concise and specific. Keep your response to a single, impactful paragraph.
+- States the actual pattern/insight directly (not how passages "relate")
+- Uses specific terms and concepts from the passages
+- Focuses on what we learn about the topic itself
+- Avoids meta-language like "reinforces", "extends", "highlights"
 
-If this adds nothing new or is simply a repetition of what we already know, respond with exactly: NOTHING"""
+Example good synthesis: "Humanitarian interventions create moral hazard by encouraging weaker parties to escalate conflicts expecting foreign support, while simultaneously nations hesitate to deploy ground troops, resulting in delayed interventions that fail to prevent atrocities like Rwanda."
 
-REM_QUESTION_PROMPT = """What is the implicit question at the heart which binds the following passages together? Reply with the question only."""
+If this adds nothing new or is simply repetition, respond with exactly: NOTHING"""
+
+REM_QUESTION_PROMPT = """You are a wise historian pondering these three seemingly unrelated passages from different times and contexts. As you contemplate them together, a surprising question emerges - perhaps about a paradox, an echo across time, a pattern that breaks, or an assumption all three share without realizing it.
+
+What fascinating question arises when you let these specific passages speak to each other? 
+
+The best questions often:
+- Notice what's absent as much as what's present
+- Find the unexpected thread that connects disparate events  
+- Reveal tensions between how things appear and how they actually work
+- Discover what all three passages take for granted
+- Point to patterns that only become visible across long time spans
+
+Let your mind wander and find the question that makes someone say "I never thought of it that way."
+
+Reply with only the question itself."""
 
 ARTICLE_SUMMARY_PROMPT = """Summarize this article in 1-2 paragraphs (100-150 words). 
 Focus on the main arguments, key insights, and conclusions. 

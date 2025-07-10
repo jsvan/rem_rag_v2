@@ -91,7 +91,26 @@
    - Monitor for entity resolution in action
    - Analyze cross-decade patterns
 
-2. **Performance Optimization**
+2. **RAG Temporal Context Enhancement** ✅
+   - Ensure all RAG chunks include year metadata in text for LLM processing
+   - Append "(Year: YEAR)" to chunk text when passing to LLM as context
+   - Enables LLM to reason about temporal evolution of ideas
+   - Allows comparison of old vs new information in synthesis
+   - COMPLETED: Updated implant.py, ask_rag.py, rem_cycle.py, and rem_cycle_batch.py
+
+3. **REM Question Quality Testing**
+   - Compare REM synthesis from 3 sampled nodes vs RAG query with n=5
+   - Test: Generate question from 3 nodes, then RAG query that question
+   - Qualitative assessment: Is 3-node synthesis better or should we RAG first?
+   - Consider enhanced process: Sample 3 → Generate Q → RAG on Q → Synthesize
+
+4. **Implantation Analysis**
+   - Analyze what types of nodes the implant function creates
+   - Distribution of synthesis vs "NOTHING" results
+   - Patterns in what gets synthesized vs rejected
+   - Quality assessment of implant-generated nodes
+
+5. **Performance Optimization**
    - Batch processing for LLM calls
    - Implement concurrent entity extraction
    - Add progress bars for long runs
@@ -107,7 +126,21 @@
    - Track entity coherence
    - Validate REM insights
 
-3. **Expand Time Period**
+3. **REM Cycle Enhancement - Anticipatory Q&A Generation**
+   - During REM cycles, generate high-value questions the system can answer well
+   - For each generated question, prepare and cache the answer using k-NN retrieval
+   - Store question-answer pairs as new nodes for rapid response
+   - Benefits:
+     - Pre-compute answers to likely user questions
+     - Identify knowledge strengths and gaps
+     - Create a "FAQ" layer from emergent patterns
+   - Implementation:
+     - After REM synthesis, ask "What questions does this insight help answer?"
+     - Generate 2-3 questions per REM cycle
+     - Use standard RAG pipeline to generate answers
+     - Store Q&A pairs with metadata for quick retrieval
+
+4. **Expand Time Period**
    - Process additional decades as data available
    - Cross-decade REM patterns
    - Long-term entity tracking

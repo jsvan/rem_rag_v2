@@ -170,7 +170,7 @@ class REMCycle:
         # Prepare context from samples
         passages = "\n\n".join([
             f"Passage {i+1} (from {s.metadata.get('article_title', 'Unknown')}, "
-            f"{s.metadata.get('year', 'Unknown year')}):\n{s.content}"
+            f"{s.metadata.get('year', 'Unknown year')}):\n{s.content} (Year: {s.metadata.get('year', 'Unknown')})"
             for i, s in enumerate(samples)
         ])
         
@@ -201,7 +201,7 @@ class REMCycle:
         
         for i, sample in enumerate(samples):
             context += f"Source {i+1} ({sample.metadata.get('year', 'Unknown')}):\n"
-            context += f"{sample.content}\n\n"
+            context += f"{sample.content} (Year: {sample.metadata.get('year', 'Unknown')})\n\n"
         
         prompt = f"""Given the following implicit question and source materials, 
         generate a synthesis that reveals hidden patterns and connections:
@@ -259,8 +259,8 @@ class REMCycle:
             metadata["year_min"] = min(years)
             metadata["year_max"] = max(years)
         
-        # Create combined text for embedding
-        text_for_embedding = f"Question: {question}\n\nSynthesis: {synthesis}"
+        # Create combined text for embedding - just concatenate question and synthesis
+        text_for_embedding = f"{question}\n\n{synthesis}"
         
         # Store REM node directly (no implant synthesis needed)
         ids = self.store.add([text_for_embedding], [metadata])
@@ -306,7 +306,7 @@ class REMCycle:
                     
             insights.append({
                 "question": result.metadata.get("implicit_question", ""),
-                "synthesis": result.page_content.split("Synthesis: ")[-1] if "Synthesis: " in result.page_content else result.page_content,
+                "synthesis": result.page_content,  # Now it's just the concatenated text
                 "source_years": source_years,
                 "score": result.metadata.get("score", 0)
             })
