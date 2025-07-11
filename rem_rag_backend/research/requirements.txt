@@ -1,0 +1,17 @@
+# Requirements for vector space analysis research module
+
+# Core dependencies (should already be installed for REM RAG)
+numpy>=1.21.0
+scipy>=1.7.0
+scikit-learn>=1.0.0
+pandas>=1.3.0
+matplotlib>=3.4.0
+seaborn>=0.11.0
+tqdm>=4.62.0
+
+# Additional visualization dependencies
+umap-learn>=0.5.0  # For UMAP projections
+tabulate>=0.8.0    # For markdown tables in reports
+
+# Optional but recommended
+plotly>=5.0.0      # For interactive plots (future enhancement)

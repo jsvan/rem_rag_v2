@@ -1,0 +1,15 @@
+{
+  "completed_items": [
+    "year_2000"
+  ],
+  "stats": {
+    "year_2000": {
+      "articles_processed": 127,
+      "total_requests": 127,
+      "syntheses_stored": 0,
+      "summaries_stored": 127,
+      "rem_nodes": 843
+    }
+  },
+  "last_updated": "2025-07-10T19:06:38.542839"
+}
